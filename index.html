@@ -24,15 +24,40 @@
         from cooking_rewards import cook_reward
         from mastery import cook_mastery
 
+        storage_key = "bdo_imperial_turnins"
+
+        # Setter storage so that we can differentiate values on this site from others at the same domain
+        def set_storage(key, val):
+            storage["{}-{}".format(storage_key, key)] = val
+
+        # Getting for storage so that we can differentiate values on this site from others at the same domain
+        def get_storage(key):
+            return storage["{}-{}".format(storage_key, key)]
+
+        # Check if a value exists in storage
+        def check_storage(key):
+            return "{}-{}".format(storage_key, key) in storage
+
+        # Reset that only deletes values for this site
+        def reset_data(ev):
+            for key in storage.keys():
+                if key.startswith(storage_key):
+                    del storage[key]
+
+            set_storage('page', "Information")
+            doc['page'].value = get_storage('page')
+            update(None)
+
+
         # update was cooking related
         def update_cooking(page):
-            baseval = int(cooking[page]['base_value']) * (2.5 + cook_mastery[str(int(storage["mastery"])//50)]) + cook_reward[cooking[page]['reward']]['value']
+            baseval = int(cooking[page]['base_value']) * (2.5 + cook_mastery[str(int(get_storage("mastery"))//50)]) + cook_reward[cooking[page]['reward']]['value']
             t = TABLE(TR(TH()+TH("Buy from CM")+TH("Box vs Sell")))
             t <= TR(TH("Material")+TH("total profit w/ box")+TH("If self made parts"))
             for dish in cooking[page]['materials']:
                 count = cooking[page]['materials'][dish]
-                base_dish = int(storage[dish])
-                tax = .65*(1+float(storage['tax'])/100)
+                base_dish = int(get_storage(dish))
+                tax = .65*(1+float(get_storage('tax'))/100)
                 base_t = baseval - base_dish*count
                 base_t2 = baseval - base_dish*count*tax
                 base_buy = '{}{:,.2f}'.format('-' if base_t < 0 else '', abs(base_t))
@@ -44,7 +69,7 @@
 
         # Handle changes in page selection
         def update(ev):
-            storage['page'] = doc['page'].value
+            set_storage('page', doc['page'].value)
             if doc['page'].value == "Information":
                 show_info()
             elif doc['page'].value in cooking:
@@ -63,19 +88,11 @@
                 sel <= OPTION(page)
             sel.bind("change", update)
             doc['pagelist'] <= sel
-            if 'page' in storage and storage['page'] in pages:
-                doc['page'].value = storage['page']
+            if check_storage('page') and get_storage('page') in pages:
+                doc['page'].value = get_storage('page')
             else:
                 doc['page'].value = "Information"
-                storage['page'] = doc['page'].value
-            update(None)
-
-
-        def reset_data(ev):
-            for key in storage.keys():
-                del storage[key]
-            storage['page'] = "Information"
-            doc['page'].value = storage['page']
+                set_storage('page', doc['page'].value)
             update(None)
 
 
@@ -83,8 +100,8 @@
             for box in cook_reward:
                 val = 0
                 for item in cook_reward[box]['items']:
-                    val += cook_reward[box]['items'][item]["rate"]*cook_reward[box]['items'][item]["count"]*int(storage[item])
-                cook_reward[box]["value"] = val*.65*(1+float(storage['tax'])/100)
+                    val += cook_reward[box]['items'][item]["rate"]*cook_reward[box]['items'][item]["count"]*int(get_storage(item))
+                cook_reward[box]["value"] = val*.65*(1+float(get_storage('tax'))/100)
             return
 
 
@@ -96,16 +113,16 @@
             if ev.currentTarget['id'] == "mastery":
                 updatemastery()
 
-            print(ev.currentTarget['id'])
+            # Converted to remove leading and trailing 0s
             if ev.currentTarget['id'] == "tax":
-                storage[ev.currentTarget['id']] = str(float(ev.currentTarget.value))
+                set_storage(ev.currentTarget['id'], str(float(ev.currentTarget.value)))
             else:
-                storage[ev.currentTarget['id']] = str(int(ev.currentTarget.value))
+                set_storage(ev.currentTarget['id'], str(int(ev.currentTarget.value)))
 
         # Code to show an about page and miscellaneous information.
         def show_info():
-            if "mastery" not in storage:
-                storage["mastery"] = "0"
+            if  not check_storage("mastery"):
+                set_storage("mastery", "0")
             buf = DIV("Cooking Mastery: " + INPUT(id="mastery", type="number", step=1, min=0, max=2000)) + DIV(id="masterybonus") + DIV("Market Collection Benefit" + INPUT(id="tax", type="number", step=.1, min=0))
 
             buf += H3("Gift Box rewards")
@@ -123,7 +140,7 @@
             buf += t
 
             for section in cooking:
-                baseval = int(cooking[section]['base_value']) * (2.5 + cook_mastery[str(int(storage["mastery"])//50)])
+                baseval = int(cooking[section]['base_value']) * (2.5 + cook_mastery[str(int(get_storage("mastery"))//50)])
                 buf += H3(section)
                 t = TABLE(TR(TH("Material")+TH("cost")+TH("Value Per")))
                 for material in cooking[section]["materials"]:
@@ -134,11 +151,11 @@
             doc['pageparts'] <= buf
 
             for atr in doc.select('input'):
-                if atr.id in storage:
-                    atr.value = storage[atr.id]
+                if check_storage(atr.id):
+                    atr.value = get_storage(atr.id)
                 else:
                     atr.value = 0 # TODO: DEFAULTS
-                    storage[atr.id] = "0" # TODO: DEFAULTS
+                    set_storage(atr.id, "0") # TODO: DEFAULTS
                 atr.bind("input", update_value)
             updatemastery()
 
