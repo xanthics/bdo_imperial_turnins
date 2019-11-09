@@ -26,7 +26,7 @@
 
         # update was cooking related
         def update_cooking(page):
-            baseval = int(cooking[page]['base_value']) * (2.5 + float(cook_mastery[str(int(storage["mastery"])//50)])) + cook_reward[cooking[page]['reward']]['value']
+            baseval = int(cooking[page]['base_value']) * (2.5 + cook_mastery[str(int(storage["mastery"])//50)]) + cook_reward[cooking[page]['reward']]['value']
             t = TABLE(TR(TH()+TH("Buy from CM")+TH("Box vs Sell")))
             t <= TR(TH("Material")+TH("total profit w/ box")+TH("If self made parts"))
             for dish in cooking[page]['materials']:
@@ -88,14 +88,20 @@
             return
 
 
+        def updatemastery():
+            doc['masterybonus'].text = "Current Mastery Bonus: {:.2%} (Additive with Imperial Bonus)".format(cook_mastery[str(int(doc['mastery'].value)//50)])
+
+
         def update_value(ev):
+            if ev.currentTarget['id'] == "mastery":
+                updatemastery()
             storage[ev.currentTarget['id']] = str(float(ev.currentTarget.value))
 
         # Code to show an about page and miscellaneous information.
         def show_info():
             if "mastery" not in storage:
                 storage["mastery"] = "0"
-            buf = DIV("Cooking Mastery: " + INPUT(id="mastery", type="number", step=1, min=0, max=2000)) + DIV("Market Collection Benefit" + INPUT(id="tax", type="number", step=.1, min=0))
+            buf = DIV("Cooking Mastery: " + INPUT(id="mastery", type="number", step=1, min=0, max=2000)) + DIV(id="masterybonus") + DIV("Market Collection Benefit" + INPUT(id="tax", type="number", step=.1, min=0))
 
             buf += H3("Gift Box rewards")
             items = []
@@ -112,7 +118,7 @@
             buf += t
 
             for section in cooking:
-                baseval = int(cooking[section]['base_value']) * (2.5 + float(cook_mastery[str(int(storage["mastery"])//50)]))
+                baseval = int(cooking[section]['base_value']) * (2.5 + cook_mastery[str(int(storage["mastery"])//50)])
                 buf += H3(section)
                 t = TABLE(TR(TH("Material")+TH("cost")+TH("Value Per")))
                 for material in cooking[section]["materials"]:
@@ -129,6 +135,7 @@
                     atr.value = 0 # TODO: DEFAULTS
                     storage[atr.id] = "0" # TODO: DEFAULTS
                 atr.bind("input", update_value)
+            updatemastery()
 
 
 
