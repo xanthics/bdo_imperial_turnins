@@ -46,8 +46,8 @@ select.current {
 }
 
 .red {
-    color: rgb(255, 0, 0);
+    color: rgb(150, 0, 0);
 }
 .green {
-    color: rgb(0, 255, 0);
+    color: rgb(0, 150, 0);
 }
