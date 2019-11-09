@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Imperial Crafting Turnin Calculator</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.8.0/brython.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.8.0/brython_stdlib.js"></script>
+    <link href="css/layout.css" rel="stylesheet" type="text/css" />
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body onload=brython({"debug":1})>
+    <section class="main">
+        <p>This site uses local storage to save your choices and requires Javascript to function properly.</p><br />
+        <b>Select a page: </b></strong><span id="pagelist"></span><br /><br />
+        <span id="pageparts"></span>
+        <br /><span id="reset"></span>(warning not reversible)
+    </section>
+    <script type="text/python">
+        from browser import document as doc
+        from browser import html, bind
+        from browser.html import *
+        from browser.local_storage import storage
+        from cooking_recipes import cooking
+        from cooking_rewards import cook_reward
+        from mastery import cook_mastery
+
+        # update was cooking related
+        def update_cooking(page):
+            baseval = int(cooking[page]['base_value']) * (2.5 + float(cook_mastery[str(int(storage["mastery"])//50)])) + cook_reward[cooking[page]['reward']]['value']
+            t = TABLE(TR(TH()+TH("Buy from CM")+TH("Box vs Sell")))
+            t <= TR(TH("Material")+TH("total profit w/ box")+TH("If self made parts"))
+            for dish in cooking[page]['materials']:
+                count = cooking[page]['materials'][dish]
+                base_dish = int(storage[dish])
+                tax = .65*(1+float(storage['tax'])/100)
+                base_t = baseval - base_dish*count
+                base_t2 = baseval - base_dish*count*tax
+                base_buy = '{}{:,.2f}'.format('-' if base_t < 0 else '', abs(base_t))
+                base_sell = '{}{:,.2f}'.format('-' if base_t2 < 0 else '', abs(base_t2))
+                t <= TR(TD(dish) + TD(base_buy, Class="red" if base_t < 0 else "green") + TD(base_sell, Class="red" if base_t2 < 0 else "green"))
+            doc['pageparts'].text = ''
+            doc['pageparts'] <= P(B(page)) + P("Reward Box average value(after tax): {:,.2f}".format(cook_reward[cooking[page]['reward']]['value'])) + t
+
+
+        # Handle changes in page selection
+        def update(ev):
+            storage['page'] = doc['page'].value
+            if doc['page'].value == "Information":
+                show_info()
+            elif doc['page'].value in cooking:
+                update_boxes()
+                update_cooking(doc['page'].value)
+
+
+
+        # Initialize our list of ships and select the previous one if a choice exists
+        def create_page_list():
+            sel = html.SELECT(size=1, multiple=False, id="page", step="1")
+            pages = {'Information': None}
+            for val in cooking:
+                pages[val] = "cooking"
+            for page in pages:
+                sel <= OPTION(page)
+            sel.bind("change", update)
+            doc['pagelist'] <= sel
+            if 'page' in storage and storage['page'] in pages:
+                doc['page'].value = storage['page']
+            else:
+                doc['page'].value = "Information"
+                storage['page'] = doc['page'].value
+            update(None)
+
+
+        def reset_data(ev):
+            for key in storage.keys():
+                del storage[key]
+            storage['page'] = "Information"
+            doc['page'].value = storage['page']
+            update(None)
+
+
+        def update_boxes():
+            for box in cook_reward:
+                val = 0
+                for item in cook_reward[box]['items']:
+                    val += cook_reward[box]['items'][item]["rate"]*cook_reward[box]['items'][item]["count"]*int(storage[item])
+                cook_reward[box]["value"] = val*.65*(1+float(storage['tax'])/100)
+            return
+
+
+        def update_value(ev):
+            storage[ev.currentTarget['id']] = str(int(ev.currentTarget.value))
+
+        # Code to show an about page and miscellaneous information.
+        def show_info():
+            buf = DIV("Cooking Mastery: " + INPUT(id="mastery", type="number", step=.1, min=0, max=2000)) + DIV("Market Collection Benefit" + INPUT(id="tax", type="number", step=1, min=0))
+
+            buf += H3("Gift Box rewards")
+            items = []
+            for box in cook_reward:
+                for item in cook_reward[box]['items']:
+                    if item not in items:
+                        if "Cloth" in item:
+                            items.insert(0, item)
+                        else:
+                            items.append(item)
+            t = TABLE(TR(TH("Material")+TH("value")))
+            for item in items:
+                t <= TR(TD(item) + TD(INPUT(id=item, type="number", step=1, min=0)))
+            buf += t
+
+            for section in cooking:
+                baseval = int(cooking[section]['base_value']) * (2.5 + float(cook_mastery[str(int(storage["mastery"])//50)]))
+                buf += H3(section)
+                t = TABLE(TR(TH("Material")+TH("cost")+TH("Value Per")))
+                for material in cooking[section]["materials"]:
+                    t <= TR(TD(material) + TD(INPUT(id=material, type="number", step=1, min=0)) + TD("{:,.2f}".format(baseval/cooking[section]["materials"][material])))
+                buf += t
+
+            doc['pageparts'].text = ''
+            doc['pageparts'] <= buf
+
+            for atr in doc.select('input'):
+                if atr.id in storage:
+                    atr.value = storage[atr.id]
+                else:
+                    atr.value = 0 # TODO: DEFAULTS
+                    storage[atr.id] = "0" # TODO: DEFAULTS
+                atr.bind("input", update_value)
+
+
+
+        b_reset = html.BUTTON("Reset Data")
+        b_reset.bind("click", reset_data)
+        doc["reset"] <= b_reset
+        create_page_list()
+
+    </script>
+</body>
+</html>
