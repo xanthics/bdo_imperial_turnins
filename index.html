@@ -95,7 +95,7 @@
         def show_info():
             if "mastery" not in storage:
                 storage["mastery"] = "0"
-            buf = DIV("Cooking Mastery: " + INPUT(id="mastery", type="number", step=.1, min=0, max=2000)) + DIV("Market Collection Benefit" + INPUT(id="tax", type="number", step=1, min=0))
+            buf = DIV("Cooking Mastery: " + INPUT(id="mastery", type="number", step=1, min=0, max=2000)) + DIV("Market Collection Benefit" + INPUT(id="tax", type="number", step=.1, min=0))
 
             buf += H3("Gift Box rewards")
             items = []
