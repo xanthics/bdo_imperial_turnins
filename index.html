@@ -95,7 +95,12 @@
         def update_value(ev):
             if ev.currentTarget['id'] == "mastery":
                 updatemastery()
-            storage[ev.currentTarget['id']] = str(float(ev.currentTarget.value))
+
+            print(ev.currentTarget['id'])
+            if ev.currentTarget['id'] == "tax":
+                storage[ev.currentTarget['id']] = str(float(ev.currentTarget.value))
+            else:
+                storage[ev.currentTarget['id']] = str(int(ev.currentTarget.value))
 
         # Code to show an about page and miscellaneous information.
         def show_info():
