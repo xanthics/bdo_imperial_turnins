@@ -20,9 +20,14 @@
         from browser import html, bind
         from browser.html import *
         from browser.local_storage import storage
+        from alchemy_recipes import alchemy
+        from alchemy_rewards import alch_reward
         from cooking_recipes import cooking
         from cooking_rewards import cook_reward
-        from mastery import cook_mastery
+        from mastery import cook_mastery, alch_mastery
+
+        # flag to keep track of if we need to update box values
+        u_boxes = True
 
         storage_key = "bdo_imperial_turnins"
 
@@ -51,9 +56,9 @@
 
         # update was cooking related
         def update_cooking(page):
-            baseval = int(cooking[page]['base_value']) * (2.5 + cook_mastery[str(int(get_storage("mastery"))//50)]) + cook_reward[cooking[page]['reward']]['value']
+            baseval = int(cooking[page]['base_value']) * (2.5 + cook_mastery[str(int(get_storage("cookmastery"))//50)])
             t = TABLE(TR(TH()+TH("Buy from CM")+TH("Box vs Sell")))
-            t <= TR(TH("Material")+TH("total profit w/ box")+TH("If self made parts"))
+            t <= TR(TH("Material")+TH("profit")+TH("If self made parts"))
             for dish in cooking[page]['materials']:
                 count = cooking[page]['materials'][dish]
                 base_dish = int(get_storage(dish))
@@ -64,7 +69,25 @@
                 base_sell = '{}{:,.2f}'.format('-' if base_t2 < 0 else '', abs(base_t2))
                 t <= TR(TD(dish) + TD(base_buy, Class="red" if base_t < 0 else "green") + TD(base_sell, Class="red" if base_t2 < 0 else "green"))
             doc['pageparts'].text = ''
-            doc['pageparts'] <= P(B(page)) + P("Reward Box average value(after tax): {:,.2f}".format(cook_reward[cooking[page]['reward']]['value'])) + t
+            doc['pageparts'] <= P(B(page)) + P("Reward Box average value(after tax): {:,.2f} - not included in totals.".format(cook_reward[cooking[page]['reward']]['value'])) + t
+
+
+        # update was alchemy related
+        def update_alchemy(page):
+            baseval = int(alchemy[page]['base_value']) * (2.5 + alch_mastery[str(int(get_storage("alchmastery"))//50)])
+            t = TABLE(TR(TH()+TH("Buy from CM")+TH("Box vs Sell")))
+            t <= TR(TH("Material")+TH("profit")+TH("If self made parts"))
+            for dish in alchemy[page]['materials']:
+                count = alchemy[page]['materials'][dish]
+                base_dish = int(get_storage(dish))
+                tax = .65*(1+float(get_storage('tax'))/100)
+                base_t = baseval - base_dish*count
+                base_t2 = baseval - base_dish*count*tax
+                base_buy = '{}{:,.2f}'.format('-' if base_t < 0 else '', abs(base_t))
+                base_sell = '{}{:,.2f}'.format('-' if base_t2 < 0 else '', abs(base_t2))
+                t <= TR(TD(dish) + TD(base_buy, Class="red" if base_t < 0 else "green") + TD(base_sell, Class="red" if base_t2 < 0 else "green"))
+            doc['pageparts'].text = ''
+            doc['pageparts'] <= P(B(page)) + P("Reward Box average value(after tax): {:,.2f} - not included in totals.".format(alch_reward[alchemy[page]['reward']]['value'])) + t
 
 
         # Handle changes in page selection
@@ -73,17 +96,24 @@
             if doc['page'].value == "Information":
                 show_info()
             elif doc['page'].value in cooking:
-                update_boxes()
+                if u_boxes:
+                    update_boxes()
                 update_cooking(doc['page'].value)
+            elif doc['page'].value in alchemy:
+                if u_boxes:
+                    update_boxes()
+                update_alchemy(doc['page'].value)
 
 
 
         # Initialize our list of ships and select the previous one if a choice exists
         def create_page_list():
             sel = html.SELECT(size=1, multiple=False, id="page", step="1")
-            pages = {'Information': None}
+            pages = ['Information']
             for val in cooking:
-                pages[val] = "cooking"
+                pages.append(val)
+            for val in alchemy:
+                pages.append(val)
             for page in pages:
                 sel <= OPTION(page)
             sel.bind("change", update)
@@ -96,23 +126,37 @@
             update(None)
 
 
+        # Updates the value of boxes
+        # for each box first find its total weight, then calculate each items percentage
         def update_boxes():
+            global u_boxes
+            u_boxes = False
             for box in cook_reward:
+                total = 0
+                for item in cook_reward[box]['items']:
+                    total += cook_reward[box]['items'][item]['rate']
                 val = 0
                 for item in cook_reward[box]['items']:
-                    val += cook_reward[box]['items'][item]["rate"]*cook_reward[box]['items'][item]["count"]*int(get_storage(item))
+                    val += (cook_reward[box]['items'][item]["rate"]/total)*cook_reward[box]['items'][item]["count"]*int(get_storage(item))
                 cook_reward[box]["value"] = val*.65*(1+float(get_storage('tax'))/100)
-            return
+            for box in alch_reward:
+                total = 0
+                for item in alch_reward[box]['items']:
+                    total += alch_reward[box]['items'][item]['rate']
+                val = 0
+                for item in alch_reward[box]['items']:
+                    val += (alch_reward[box]['items'][item]["rate"]/total)*alch_reward[box]['items'][item]["count"]*int(get_storage(item))
+                alch_reward[box]["value"] = val*.65*(1+float(get_storage('tax'))/100)
 
 
         def updatemastery():
-            doc['masterybonus'].text = "Current Mastery Bonus: {:.2%} (Additive with Imperial Bonus)".format(cook_mastery[str(int(doc['mastery'].value)//50)])
+            doc['alchmasterybonus'].text = "Current Mastery Bonus: {:.2%} (Additive with Imperial Bonus)".format(alch_mastery[str(int(doc['alchmastery'].value)//50)])
+            doc['cookmasterybonus'].text = "Current Mastery Bonus: {:.2%} (Additive with Imperial Bonus)".format(cook_mastery[str(int(doc['cookmastery'].value)//50)])
 
 
         def update_value(ev):
-            if ev.currentTarget['id'] == "mastery":
+            if "mastery" in ev.currentTarget['id']:
                 updatemastery()
-
             # Converted to remove leading and trailing 0s
             if ev.currentTarget['id'] == "tax":
                 set_storage(ev.currentTarget['id'], str(float(ev.currentTarget.value)))
@@ -121,11 +165,18 @@
 
         # Code to show an about page and miscellaneous information.
         def show_info():
-            if  not check_storage("mastery"):
-                set_storage("mastery", "0")
-            buf = DIV("Cooking Mastery: " + INPUT(id="mastery", type="number", step=1, min=0, max=2000)) + DIV(id="masterybonus") + DIV("Market Collection Benefit" + INPUT(id="tax", type="number", step=.1, min=0))
+            global u_boxes
+            u_boxes = True
+            if  not check_storage("cookmastery"):
+                set_storage("cookmastery", "0")
+            if  not check_storage("alchmastery"):
+                set_storage("alchmastery", "0")
+            buf = H3("Masteries and Market Collection Bonus") + \
+                  DIV("Cooking Mastery: " + INPUT(id="cookmastery", type="number", step=1, min=0, max=2000)) + DIV(id="cookmasterybonus") + \
+                  DIV("Alchemy Mastery: " + INPUT(id="alchmastery", type="number", step=1, min=0, max=2000)) + DIV(id="alchmasterybonus") + \
+                  DIV("Market Collection Benefit" + INPUT(id="tax", type="number", step=.1, min=0))
 
-            buf += H3("Gift Box rewards")
+            buf += H3("Cooking Gift Box rewards", id="Cooking Gift Box rewards")
             items = []
             for box in cook_reward:
                 for item in cook_reward[box]['items']:
@@ -139,15 +190,44 @@
                 t <= TR(TD(item) + TD(INPUT(id=item, type="number", step=1, min=0)))
             buf += t
 
+            nav = ["Cooking Gift Box rewards"]
             for section in cooking:
-                baseval = int(cooking[section]['base_value']) * (2.5 + cook_mastery[str(int(get_storage("mastery"))//50)])
-                buf += H3(section)
+                nav.append(section)
+                baseval = int(cooking[section]['base_value']) * (2.5 + cook_mastery[str(int(get_storage("cookmastery"))//50)])
+                buf += H3(section, id=section)
                 t = TABLE(TR(TH("Material")+TH("cost")+TH("Value Per")))
                 for material in cooking[section]["materials"]:
                     t <= TR(TD(material) + TD(INPUT(id=material, type="number", step=1, min=0)) + TD("{:,.2f}".format(baseval/cooking[section]["materials"][material])))
                 buf += t
 
+            buf += H3("Alchemy Gift Box rewards", id="Alchemy Gift Box rewards")
+            nav.append("Alchemy Gift Box rewards")
+            items = []
+            for box in alch_reward:
+                for item in alch_reward[box]['items']:
+                    if item not in items:
+                        if "Cloth" in item:
+                            items.insert(0, item)
+                        else:
+                            items.append(item)
+            t = TABLE(TR(TH("Material")+TH("value")))
+            for item in items:
+                t <= TR(TD(item) + TD(INPUT(id=item, type="number", step=1, min=0)))
+            buf += t
+
+            for section in alchemy:
+                nav.append(section)
+                baseval = int(alchemy[section]['base_value']) * (2.5 + alch_mastery[str(int(get_storage("alchmastery"))//50)])
+                buf += H3(section, id=section)
+                t = TABLE(TR(TH("Material")+TH("cost")+TH("Value Per")))
+                for material in alchemy[section]["materials"]:
+                    t <= TR(TD(material) + TD(INPUT(id=material, type="number", step=1, min=0)) + TD("{:,.2f}".format(baseval/alchemy[section]["materials"][material])))
+                buf += t
+
             doc['pageparts'].text = ''
+            doc['pageparts'] <= H3("Navigation")
+            for sec in nav:
+                doc['pageparts'] <= DIV(A(sec, href="#{}".format(sec)))
             doc['pageparts'] <= buf
 
             for atr in doc.select('input'):
