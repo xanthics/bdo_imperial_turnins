@@ -54,10 +54,29 @@
             update(None)
 
 
+        # update box values
+        def update_box_value_cooking(ev):
+            set_storage(ev.currentTarget['id'], str(int(ev.currentTarget.value)))
+            page = get_storage('page')
+            dish = ev.currentTarget['id']
+            count = cooking[page]['materials'][dish]
+            baseval = int(cooking[page]['base_value']) * (2.5 + cook_mastery[str(int(get_storage("cookmastery"))//50)])
+            base_dish = int(ev.currentTarget.value)
+            tax = .65*(1+float(get_storage('tax'))/100)
+            base_t = baseval - base_dish*count
+            base_t2 = baseval - base_dish*count*tax
+            base_buy = '{}{:,.2f}'.format('-' if base_t < 0 else '', abs(base_t))
+            base_sell = '{}{:,.2f}'.format('-' if base_t2 < 0 else '', abs(base_t2))
+            doc["{}buy".format(dish)].text = base_buy
+            doc["{}buy".format(dish)].attrs['class'] = "red" if base_t < 0 else "green"
+            doc["{}sell".format(dish)].text = base_sell
+            doc["{}sell".format(dish)].attrs['class'] = "red" if base_t2 < 0 else "green"
+
+
         # update was cooking related
         def update_cooking(page):
             baseval = int(cooking[page]['base_value']) * (2.5 + cook_mastery[str(int(get_storage("cookmastery"))//50)])
-            t = TABLE(TR(TH()+TH("Buy from CM")+TH("Box vs Sell")))
+            t = TABLE(TR(TH()+TH("Buy from CM")+TH("Box vs Sell")+TH("cost")+TH("Max Value Per")))
             t <= TR(TH("Material")+TH("profit")+TH("If self made parts"))
             for dish in cooking[page]['materials']:
                 count = cooking[page]['materials'][dish]
@@ -67,15 +86,41 @@
                 base_t2 = baseval - base_dish*count*tax
                 base_buy = '{}{:,.2f}'.format('-' if base_t < 0 else '', abs(base_t))
                 base_sell = '{}{:,.2f}'.format('-' if base_t2 < 0 else '', abs(base_t2))
-                t <= TR(TD(dish) + TD(base_buy, Class="red" if base_t < 0 else "green") + TD(base_sell, Class="red" if base_t2 < 0 else "green"))
+                t <= TR(TD(dish) + TD(base_buy, Class="red" if base_t < 0 else "green", id="{}buy".format(dish)) + TD(base_sell, id="{}sell".format(dish), Class="red" if base_t2 < 0 else "green") + TD(INPUT(id=dish, type="number", step=1, min=0)) + TD("{:,.2f}".format(baseval/cooking[page]["materials"][dish])))
             doc['pageparts'].text = ''
             doc['pageparts'] <= P(B(page)) + P("Reward Box average value(after tax): {:,.2f} - not included in totals.".format(cook_reward[cooking[page]['reward']]['value'])) + t
+            for atr in doc.select('input'):
+                if check_storage(atr.id):
+                    atr.value = get_storage(atr.id)
+                else:
+                    atr.value = 0 # TODO: DEFAULTS
+                    set_storage(atr.id, "0") # TODO: DEFAULTS
+                atr.bind("input", update_box_value_cooking)
+
+
+        # update box values
+        def update_box_value_alchemy(ev):
+            set_storage(ev.currentTarget['id'], str(int(ev.currentTarget.value)))
+            page = get_storage('page')
+            dish = ev.currentTarget['id']
+            count = alchemy[page]['materials'][dish]
+            baseval = int(alchemy[page]['base_value']) * (2.5 + alch_mastery[str(int(get_storage("alchmastery"))//50)])
+            base_dish = int(ev.currentTarget.value)
+            tax = .65*(1+float(get_storage('tax'))/100)
+            base_t = baseval - base_dish*count
+            base_t2 = baseval - base_dish*count*tax
+            base_buy = '{}{:,.2f}'.format('-' if base_t < 0 else '', abs(base_t))
+            base_sell = '{}{:,.2f}'.format('-' if base_t2 < 0 else '', abs(base_t2))
+            doc["{}buy".format(dish)].text = base_buy
+            doc["{}buy".format(dish)].attrs['class'] = "red" if base_t < 0 else "green"
+            doc["{}sell".format(dish)].text = base_sell
+            doc["{}sell".format(dish)].attrs['class'] = "red" if base_t2 < 0 else "green"
 
 
         # update was alchemy related
         def update_alchemy(page):
             baseval = int(alchemy[page]['base_value']) * (2.5 + alch_mastery[str(int(get_storage("alchmastery"))//50)])
-            t = TABLE(TR(TH()+TH("Buy from CM")+TH("Box vs Sell")))
+            t = TABLE(TR(TH()+TH("Buy from CM")+TH("Box vs Sell")+TH("cost")+TH("Max Value Per")))
             t <= TR(TH("Material")+TH("profit")+TH("If self made parts"))
             for dish in alchemy[page]['materials']:
                 count = alchemy[page]['materials'][dish]
@@ -85,9 +130,16 @@
                 base_t2 = baseval - base_dish*count*tax
                 base_buy = '{}{:,.2f}'.format('-' if base_t < 0 else '', abs(base_t))
                 base_sell = '{}{:,.2f}'.format('-' if base_t2 < 0 else '', abs(base_t2))
-                t <= TR(TD(dish) + TD(base_buy, Class="red" if base_t < 0 else "green") + TD(base_sell, Class="red" if base_t2 < 0 else "green"))
+                t <= TR(TD(dish) + TD(base_buy, Class="red" if base_t < 0 else "green", id="{}buy".format(dish)) + TD(base_sell, id="{}sell".format(dish), Class="red" if base_t2 < 0 else "green") + TD(INPUT(id=dish, type="number", step=1, min=0)) + TD("{:,.2f}".format(baseval/alchemy[page]["materials"][dish])))
             doc['pageparts'].text = ''
             doc['pageparts'] <= P(B(page)) + P("Reward Box average value(after tax): {:,.2f} - not included in totals.".format(alch_reward[alchemy[page]['reward']]['value'])) + t
+            for atr in doc.select('input'):
+                if check_storage(atr.id):
+                    atr.value = get_storage(atr.id)
+                else:
+                    atr.value = 0 # TODO: DEFAULTS
+                    set_storage(atr.id, "0") # TODO: DEFAULTS
+                atr.bind("input", update_box_value_alchemy)
 
 
         # Handle changes in page selection
@@ -195,7 +247,7 @@
                 nav.append(section)
                 baseval = int(cooking[section]['base_value']) * (2.5 + cook_mastery[str(int(get_storage("cookmastery"))//50)])
                 buf += H3(section, id=section)
-                t = TABLE(TR(TH("Material")+TH("cost")+TH("Value Per")))
+                t = TABLE(TR(TH("Material")+TH("cost")+TH("Max Value Per")))
                 for material in cooking[section]["materials"]:
                     t <= TR(TD(material) + TD(INPUT(id=material, type="number", step=1, min=0)) + TD("{:,.2f}".format(baseval/cooking[section]["materials"][material])))
                 buf += t
@@ -219,7 +271,7 @@
                 nav.append(section)
                 baseval = int(alchemy[section]['base_value']) * (2.5 + alch_mastery[str(int(get_storage("alchmastery"))//50)])
                 buf += H3(section, id=section)
-                t = TABLE(TR(TH("Material")+TH("cost")+TH("Value Per")))
+                t = TABLE(TR(TH("Material")+TH("cost")+TH("Max Value Per")))
                 for material in alchemy[section]["materials"]:
                     t <= TR(TD(material) + TD(INPUT(id=material, type="number", step=1, min=0)) + TD("{:,.2f}".format(baseval/alchemy[section]["materials"][material])))
                 buf += t
