@@ -169,7 +169,6 @@ cooking = {
 			"Fresh Hunter's Salad": 6,
 			"Honeycomb Cookie": 18,
 			"Crispy Honeycomb Cookie": 6,
-			"Special Arehaza Meal": 18,
 			"Lean Meat Salad": 18,
 			"Top Grade Lean Meat Salad": 6,
 			"Meat Croquette": 18,
@@ -181,8 +180,12 @@ cooking = {
 			"Ghormeh Sabzi": 15,
 			"Thick Ghormeh Sabzi": 5,
 			"Savory Steak": 15,
-			"Balenos Meal": 15,
-			"Special Balenos Meal": 5
+			"King of Jungle Hamburg": 15,
+			"Jumbo King of Jungle Hamburg": 5,
+			"Meat Sandwich": 15,
+			"High-Quality Meat Sandwich": 5,
+			"Ham Sandwich": 15,
+			"High-Quality Ham Sandwich": 5
 		}
 	},
 	"Guru's Cooking Box": {
@@ -198,22 +201,19 @@ cooking = {
 			"Special Serendia Meal": 7,
 			"Valencia Meal": 18,
 			"Special Valencia Meal": 6,
-			"King of Jungle Hamburg": 24,
-			"Jumbo King of Jungle Hamburg": 8,
 			"Special Drieghanese Meal": 18,
 			"Knight Combat Rarions": 18,
-			"Meat Sandwich": 18,
-			"High-Quality Meat Sandwich": 6,
 			"Calpheon Meal": 18,
 			"Special Calpheon Meal": 6,
-			"Ham Sandwich": 18,
-			"High-Quality Ham Sandwich": 6,
 			"Mediah Meal": 15,
 			"Special Mediah Meal": 5,
 			"Khalk's Fermented Wine": 12,
 			"Khalk's Strong Fermented Wine": 4,
 			"Hard-Boiled Shellfish": 12,
-			"Big Hard-Boiled Shellfish": 4
+			"Big Hard-Boiled Shellfish": 4,
+			"Balenos Meal": 24,
+			"Special Balenos Meal": 8,
+			"Special Arehaza Meal": 27
 		}
 	},
 }
